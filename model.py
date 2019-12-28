@@ -4,6 +4,10 @@ from torch import nn, cuda
 from torch.nn import functional as F
 
 
+LSTM_UNITS = 128
+DENSE_HIDDEN_UNITS = 4 * LSTM_UNITS
+
+
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
