@@ -38,7 +38,7 @@ class NeuralNet(nn.Module):
         h_embedding = self.embedding_dropout(h_embedding).squeeze(2).transpose(1, 2)
         return h_embedding
 
-    def forward(self, x, normal_feats, lengths=None):
+    def forward(self, x):
         h_embedding = self.embedding(x.long())
         h_embedding = self.apply_spatial_dropout(h_embedding)
 
@@ -49,8 +49,6 @@ class NeuralNet(nn.Module):
 
         avg_pool = torch.mean(h_gru, 1)
         max_pool, _ = torch.max(h_gru, 1)
-
-#         normal_linear  = F.relu(self.normal_linear(normal_feats.float()))
 
         conc = torch.cat((hh_gru, avg_pool, max_pool), 1)
         conc = self.relu(self.linear(conc))

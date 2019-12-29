@@ -1,3 +1,8 @@
+
+import argparse
+import pandas as pd
+
+
 def inference_test(model, test_loader):
     model.eval()
 
@@ -6,12 +11,21 @@ def inference_test(model, test_loader):
     with torch.no_grad():
         for i, inputs in enumerate(test_loader):
             if use_cuda:
-                inputs[0] = inputs[0].cuda()
-                inputs[1] = inputs[1].cuda()
-#                 inputs[2] = inputs[2].cuda()
+                inputs = inputs.cuda()
 
-            outputs = model(inputs[0], inputs[1])
-#             outputs = model(inputs[0], inputs[1], inputs[2])
+            outputs = model(inputs)
             test_preds[i * batch_size:(i+1) * batch_size] = sigmoid(outputs.cpu().numpy())
     
     return test_preds
+
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    arg = parser.add_argument
+
+
+
+
+if __name__ == '__main__':
+    main()
