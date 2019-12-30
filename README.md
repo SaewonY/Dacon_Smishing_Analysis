@@ -3,7 +3,9 @@
 
 ### Usage
 
-run build.py and copy/paste script.py to kaggle script kernel
+run **python preprocess.py** and generate preprocessed texts 
+
+run **build.py** and copy/paste **script.py** to kaggle script kernel
 
 <br>
 
