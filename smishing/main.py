@@ -23,11 +23,11 @@ from torch.utils.data import DataLoader
 
 from sklearn.model_selection import KFold
 
-from model import NeuralNet
-from data_loader import make_loader, TextDataset, BucketSampler, collate_fn
-from preprocess import tokenize, load_embedding, build_vocab
-from train import train_model
-from utils import ON_KAGGLE
+from .model import NeuralNet
+from .data_loader import make_loader, TextDataset, BucketSampler, collate_fn
+from .preprocess import tokenize, load_embedding, build_vocab
+from .train import train_model
+from .utils import ON_KAGGLE
 import warnings
 warnings.filterwarnings('ignore')
 
