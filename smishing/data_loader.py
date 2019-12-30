@@ -135,9 +135,7 @@ class BucketSampler(Sampler):
 def make_loader(X, Y, batch_size=512, max_len=220):
 
     dataset = TextDataset(X, torch.tensor(Y), maxlen=max_len)
-
     sampler = BucketSampler(dataset, dataset.get_keys(), bucket_size=batch_size * 20, batch_size=batch_size)
-
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, sampler=sampler, num_workers=0, collate_fn=collate_fn)
 
     return loader

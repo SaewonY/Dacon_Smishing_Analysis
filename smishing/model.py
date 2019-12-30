@@ -8,8 +8,6 @@ LSTM_UNITS = 128
 DENSE_HIDDEN_UNITS = 4 * LSTM_UNITS
 
 
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
 
 class NeuralNet(nn.Module):
 
