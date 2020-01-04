@@ -6,21 +6,18 @@ from torch.optim import Adam, Optimizer
 from torch.optim.lr_scheduler import _LRScheduler, LambdaLR, ReduceLROnPlateau
 from sklearn.metrics import roc_auc_score
 
-batch_size = 512
+
+batch_size = 256
+
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
-def train_model(model, train_loader, valid_loader, criterion, save_path, n_epochs=4, use_cuda=False):
+def train_model(model, train_loader, valid_loader, criterion, save_path, device, n_epochs=4):
     
     optimizer = Adam(model.parameters(), lr=0.005)
     scheduler = LambdaLR(optimizer, lambda epoch: 0.6 ** epoch)
     
-    # scale_fn = combine_scale_functions(
-    #     [partial(scale_cos, 1e-4, 5e-3), partial(scale_cos, 5e-3, 1e-3)], [0.2, 0.8])
-    # scheduler = ParamScheduler(optimizer, scale_fn, n_epochs * len(train_loader))
-
-
     best_epoch = -1
     best_valid_score = 0.
     best_valid_loss = 1.
@@ -31,8 +28,8 @@ def train_model(model, train_loader, valid_loader, criterion, save_path, n_epoch
         
         start_time = time.time()
 
-        train_loss = train_one_epoch(model, criterion, train_loader, optimizer, use_cuda)
-        val_loss, val_score = validation(model, criterion, valid_loader, use_cuda)
+        train_loss = train_one_epoch(model, criterion, train_loader, optimizer, device)
+        val_loss, val_score = validation(model, criterion, valid_loader, device)
     
         if val_score > best_valid_score:
             best_valid_score = val_score
@@ -48,22 +45,20 @@ def train_model(model, train_loader, valid_loader, criterion, save_path, n_epoch
         scheduler.step()
 
 
-def train_one_epoch(model, criterion, train_loader, optimizer, use_cuda=False):
+def train_one_epoch(model, criterion, train_loader, optimizer, device):
     
     model.train()
     train_loss = 0.
     
     optimizer.zero_grad()
 
-    for i, (_, inputs, targets) in enumerate(train_loader):
+    for i, (inputs, targets) in enumerate(train_loader):
 
-        targets = targets.unsqueeze(1)
+        inputs[0] = inputs[0].to(device)
+        inputs[1] = inputs[1].to(device)
+        targets = targets.to(device)
 
-        if use_cuda:
-            inputs = inputs.cuda()
-            targets = targets.cuda()    
-            
-        preds = model(inputs)
+        preds = model(inputs[0])
         loss = criterion(preds, targets)
 
         loss.backward()
@@ -76,7 +71,7 @@ def train_one_epoch(model, criterion, train_loader, optimizer, use_cuda=False):
     return train_loss
 
 
-def validation(model, criterion, valid_loader, use_cuda=False):
+def validation(model, criterion, valid_loader, device):
     
     model.eval()
     valid_preds = np.zeros((len(valid_loader.dataset), 1))
@@ -84,22 +79,21 @@ def validation(model, criterion, valid_loader, use_cuda=False):
     val_loss = 0.
     
     with torch.no_grad():
-        for i, (_, inputs, targets) in enumerate(valid_loader):
+        for i, (inputs, targets) in enumerate(valid_loader):
             
-            targets = targets.unsqueeze(1)
             valid_targets[i * batch_size: (i+1) * batch_size] = targets.numpy().copy()
 
-            if use_cuda:
-                inputs = inputs.cuda()
-                targets = targets.cuda()   
+            inputs[0] = inputs[0].to(device)
+            inputs[1] = inputs[1].to(device)
+            targets = targets.to(device)
             
-            outputs = model(inputs)
+            outputs = model(inputs[0])
             loss = criterion(outputs, targets)
             
             valid_preds[i * batch_size: (i+1) * batch_size] = sigmoid(outputs.detach().cpu().numpy())
             
             val_loss += loss.item() / len(valid_loader)
-    
+        
     val_score = roc_auc_score(valid_targets, valid_preds)
     
     

@@ -36,7 +36,7 @@ class NeuralNet(nn.Module):
         h_embedding = self.embedding_dropout(h_embedding).squeeze(2).transpose(1, 2)
         return h_embedding
 
-    def forward(self, x):
+    def forward(self, x, lengths=None):
         h_embedding = self.embedding(x.long())
         h_embedding = self.apply_spatial_dropout(h_embedding)
 
