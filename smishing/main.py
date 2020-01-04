@@ -46,7 +46,7 @@ def load_input(DATASET_PATH):
     x_train = train_df['jamo']
     x_test = test_df['jamo']
     y_train = torch.tensor(train_df['smishing']).float().unsqueeze(1)
-
+    
     del train_df, test_df
     gc.collect()
 
@@ -120,8 +120,9 @@ def train(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
     maxlen = lengths.max() # 295
 
     x_train_padded = torch.from_numpy(sequence.pad_sequences(x_train, maxlen=maxlen))
-    del x_train, unknown_words_fasttext, tokenizer, vocab
-    gc.collect()
+    # del x_train, unknown_words_fasttext, tokenizer, vocab
+    # gc.collect()
+
 
     if args.criterion == 'BCE':
         criterion = nn.BCEWithLogitsLoss()
@@ -130,8 +131,8 @@ def train(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
     model.to(device)
     
     n_splits = args.n_folds
-    # splits = list(KFold(n_splits=n_splits, shuffle=True, random_state=args.seed).split(x_train_padded))
-    splits = list(StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=args.seed).split(x_train_padded, y_train))
+    splits = list(KFold(n_splits=n_splits, shuffle=True, random_state=args.seed).split(x_train_padded))
+    # splits = list(StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=args.seed).split(x_train_padded, y_train))
 
     for fold_num in range(n_splits):
         
@@ -177,7 +178,7 @@ def inference(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
     test_df_id = test_df['id']
     
     x_train, y_train, x_test = load_input(DATASET_PATH)
-    
+
     with open(FASTTEXT_PATH, 'rb') as f:    
         fasttext_vocab = pickle.load(f)
     

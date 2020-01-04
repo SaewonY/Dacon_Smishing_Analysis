@@ -47,21 +47,36 @@ if __name__ == '__main__':
 
     doublespace_pattern = re.compile('\s+')
 
-    def jamo_sentence(sent):
+    # def jamo_sentence(sent):
 
+        # def transform(char):
+        #     if char == ' ':
+        #         return char
+        #     cjj = decompose(char)
+        #     try:
+        #         len(cjj)
+        #     except:
+        #         return ' '
+        #     if len(cjj) == 1:
+        #         return cjj
+        #     cjj_ = ''.join(c if c != ' ' else '' for c in cjj)
+        #     return cjj_
+
+        # sent_ = ''.join(transform(char) for char in sent)
+        # sent_ = doublespace_pattern.sub(' ', sent_)
+        # return sent_
+
+    def jamo_sentence(sent):
+        sent = sent.replace('XXX', 'X')
         def transform(char):
             if char == ' ':
                 return char
-            cjj = decompose(char)
-            try:
-                len(cjj)
-            except:
-                return ' '
-            if len(cjj) == 1:
-                return cjj
-            cjj_ = ''.join(c if c != ' ' else '' for c in cjj)
-            return cjj_
-
+            elif char == 'X':
+                return ' X'
+            elif char == '.':
+                return '. '
+            else:
+                return char
         sent_ = ''.join(transform(char) for char in sent)
         sent_ = doublespace_pattern.sub(' ', sent_)
         return sent_
