@@ -155,7 +155,7 @@ def train(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
                     save_path=model_save_path,
                     device=device,
                     n_epochs=args.n_epochs,
-                    learning_rate=args.lr)
+                    lr=args.lr)
         print()
     
     del model
@@ -209,7 +209,6 @@ def inference(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
     model.eval()
 
     model_lists = [file for file in os.listdir(output_dir) if file.endswith('.pt')]
-    print(model_lists)
 
     total_preds = []
 
@@ -249,8 +248,8 @@ if __name__ == '__main__':
     arg('--output_path', type=str, default='./output/submission.csv', help='submission saved path') 
     arg('--seed', type=int, default=42)
     arg('--n_epochs', type=int, default=6)
-    arg('--lr', type=float, default=None)
-    arg('--batch_size', type=int, default=256)
+    arg('--lr', type=float, default=0.005)
+    arg('--batch_size', type=int, default=512)
     arg('--max_len', type=int, default=236)
     arg('--max_features', type=int, default=100000)
     arg('--n_folds', type=int, default=5)

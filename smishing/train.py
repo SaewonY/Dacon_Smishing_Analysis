@@ -7,15 +7,15 @@ from torch.optim.lr_scheduler import _LRScheduler, LambdaLR, ReduceLROnPlateau
 from sklearn.metrics import roc_auc_score
 
 
-batch_size = 256
+batch_size = 512
 
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
-def train_model(model, train_loader, valid_loader, criterion, save_path, device, n_epochs=4, learnings_rate=0.001):
+def train_model(model, train_loader, valid_loader, criterion, save_path, device, n_epochs=4, lr=0.005):
     
-    optimizer = Adam(model.parameters(), lr=learnings_rate)
+    optimizer = Adam(model.parameters(), lr=lr)
     scheduler = LambdaLR(optimizer, lambda epoch: 0.6 ** epoch)
     
     best_epoch = -1
