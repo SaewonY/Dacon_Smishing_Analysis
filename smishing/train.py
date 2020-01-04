@@ -13,9 +13,9 @@ batch_size = 256
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
-def train_model(model, train_loader, valid_loader, criterion, save_path, device, n_epochs=4):
+def train_model(model, train_loader, valid_loader, criterion, save_path, device, n_epochs=4, learnings_rate=0.001):
     
-    optimizer = Adam(model.parameters(), lr=0.005)
+    optimizer = Adam(model.parameters(), lr=learnings_rate)
     scheduler = LambdaLR(optimizer, lambda epoch: 0.6 ** epoch)
     
     best_epoch = -1
@@ -38,7 +38,7 @@ def train_model(model, train_loader, valid_loader, criterion, save_path, device,
         elapsed = time.time() - start_time
         
         lr = [_['lr'] for _ in optimizer.param_groups]
-        print("Epoch {} - train_loss: {:.6f}  val_loss: {:.6f}  val_score: {:.6f}  lr: {:.5f}  time: {:.0f}s".format(
+        print("Epoch {} - train_loss: {:.6f}  val_loss: {:.6f}  val_score: {:.8f}  lr: {:.5f}  time: {:.0f}s".format(
                 epoch+1, train_loss, val_loss, val_score, lr[0], elapsed))
 
         # scheduler update

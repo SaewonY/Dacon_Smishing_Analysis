@@ -154,7 +154,8 @@ def train(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
                     criterion=criterion, 
                     save_path=model_save_path,
                     device=device,
-                    n_epochs=args.n_epochs)
+                    n_epochs=args.n_epochs,
+                    learning_rate=args.lr)
         print()
     
     del model
@@ -231,7 +232,7 @@ def inference(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
 
     submission = pd.DataFrame.from_dict({
         'id': test_df_id,
-        'prediction': result
+        'smishing': result
     })
 
     submission.to_csv(args.output_path, index=False)
