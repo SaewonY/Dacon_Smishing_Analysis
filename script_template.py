@@ -20,5 +20,5 @@ def run(command):
 
 
 run('python setup.py develop --install-dir /kaggle/working')
-run('python -m smishing.main train --embedding glove --lr 0.005 --n_folds 5 --n_epochs 4')
-run('python -m smishing.main inference')
+run('python -m smishing.main train --validate --embedding fasttext --max_features 100000 --n_epochs 6')
+run('python -m smishing.main inference --embedding fasttext')

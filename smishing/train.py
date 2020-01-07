@@ -1,14 +1,14 @@
 import time
 import math
 import numpy as np
+from functools import partial
 import torch
 from torch import nn, cuda
 from torch.optim import Adam, Optimizer
 from torch.optim.lr_scheduler import _LRScheduler, LambdaLR, ReduceLROnPlateau
 from sklearn.metrics import roc_auc_score
+from .utils import ParamScheduler, combine_scale_functions, scale_cos
 
-
-batch_size = 512
 
 def truncate(number, digits) -> float:
     stepper = 10.0 ** digits
@@ -17,10 +17,14 @@ def truncate(number, digits) -> float:
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
-def train_model(model, train_loader, valid_loader, criterion, save_path, device, n_epochs=4, lr=0.005):
+def train_model(args, fold_num, model, train_loader, valid_loader, criterion, output_dir, device, n_epochs=4, lr=0.005):
     
+    scale_fn = combine_scale_functions(
+            [partial(scale_cos, 1e-4, 5e-3), partial(scale_cos, 5e-3, 1e-3)], [0.2, 0.8])
+
     optimizer = Adam(model.parameters(), lr=lr)
-    scheduler = LambdaLR(optimizer, lambda epoch: 0.6 ** epoch)
+    # scheduler = LambdaLR(optimizer, lambda epoch: 0.6 ** epoch)
+    scheduler = ParamScheduler(optimizer, scale_fn, n_epochs * len(train_loader))
     
     best_epoch = -1
     best_valid_score = 0.
@@ -32,13 +36,18 @@ def train_model(model, train_loader, valid_loader, criterion, save_path, device,
         
         start_time = time.time()
 
-        train_loss = train_one_epoch(model, criterion, train_loader, optimizer, device)
-        val_loss, val_score = validation(model, criterion, valid_loader, device)
+        train_loss = train_one_epoch(args, model, criterion, train_loader, optimizer, scheduler, device)
+        val_loss, val_score = validation(args, model, criterion, valid_loader, device)
         val_score = truncate(val_score, 8)
         
-        if val_score > best_valid_score:
-            best_valid_score = val_score
+        if not args.validate:
+            save_path = output_dir / f'fold_{fold_num+1}_epoch_{epoch+1}_model.pt'
             torch.save(model.state_dict(), save_path)
+        
+        if args.validate:
+            if val_score > best_valid_score:
+                best_valid_score = val_score
+                # torch.save(model.state_dict(), save_path)
     
         elapsed = time.time() - start_time
         
@@ -46,11 +55,11 @@ def train_model(model, train_loader, valid_loader, criterion, save_path, device,
         print("Epoch {} - train_loss: {:.6f}  val_loss: {:.6f}  val_score: {}  lr: {:.5f}  time: {:.0f}s".format(
                 epoch+1, train_loss, val_loss, val_score, lr[0], elapsed))
 
-        # scheduler update
-        scheduler.step()
+    if args.validate:
+        return best_valid_score
 
 
-def train_one_epoch(model, criterion, train_loader, optimizer, device):
+def train_one_epoch(args, model, criterion, train_loader, optimizer, scheduler, device):
     
     model.train()
     train_loss = 0.
@@ -62,6 +71,8 @@ def train_one_epoch(model, criterion, train_loader, optimizer, device):
         inputs[0] = inputs[0].to(device)
         inputs[1] = inputs[1].to(device)
         targets = targets.to(device)
+
+        scheduler.batch_step()
 
         preds = model(inputs[0])
         loss = criterion(preds, targets)
@@ -76,7 +87,7 @@ def train_one_epoch(model, criterion, train_loader, optimizer, device):
     return train_loss
 
 
-def validation(model, criterion, valid_loader, device):
+def validation(args, model, criterion, valid_loader, device):
     
     model.eval()
     valid_preds = np.zeros((len(valid_loader.dataset), 1))
@@ -86,7 +97,7 @@ def validation(model, criterion, valid_loader, device):
     with torch.no_grad():
         for i, (inputs, targets) in enumerate(valid_loader):
             
-            valid_targets[i * batch_size: (i+1) * batch_size] = targets.numpy().copy()
+            valid_targets[i * args.batch_size: (i+1) * args.batch_size] = targets.numpy().copy()
 
             inputs[0] = inputs[0].to(device)
             inputs[1] = inputs[1].to(device)
@@ -95,7 +106,7 @@ def validation(model, criterion, valid_loader, device):
             outputs = model(inputs[0])
             loss = criterion(outputs, targets)
             
-            valid_preds[i * batch_size: (i+1) * batch_size] = sigmoid(outputs.detach().cpu().numpy())
+            valid_preds[i * args.batch_size: (i+1) * args.batch_size] = sigmoid(outputs.detach().cpu().numpy())
             
             val_loss += loss.item() / len(valid_loader)
         

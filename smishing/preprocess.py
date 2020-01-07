@@ -8,9 +8,8 @@ if not ON_KAGGLE:
     from soynlp.hangle import decompose
 
 
-max_features = 100000
 
-def build_matrix(word_index, word2vec_vocab, vector_size=200):
+def build_matrix(word_index, word2vec_vocab, max_features, vector_size=200):
     embedding_matrix = np.zeros((max_features + 1, vector_size))
     unknown_words = []
     
@@ -81,11 +80,11 @@ if __name__ == '__main__':
     #     sent_ = doublespace_pattern.sub(' ', sent_)
     #     return sent_
 
-    train_df['jamo'] = train_df['text'].apply(lambda x: jamo_sentence(x))
-    test_df['jamo'] = test_df['text'].apply(lambda x: jamo_sentence(x))
+    # train_df['jamo'] = train_df['text'].apply(lambda x: jamo_sentence(x))
+    # test_df['jamo'] = test_df['text'].apply(lambda x: jamo_sentence(x))
 
-    train_df.to_csv(os.path.join(SAVE_PATH, 'preprocessed_train.csv'), index=False, encoding='utf-8')
-    test_df.to_csv(os.path.join(SAVE_PATH, 'preprocessed_test.csv'), index=False, encoding='utf-8')
+    # train_df.to_csv(os.path.join(SAVE_PATH, 'preprocessed_train.csv'), index=False, encoding='utf-8')
+    # test_df.to_csv(os.path.join(SAVE_PATH, 'preprocessed_test.csv'), index=False, encoding='utf-8')
 
     # preprocess fasttext vacab
     from gensim.models.wrappers import FastText

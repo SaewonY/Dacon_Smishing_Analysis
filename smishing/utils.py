@@ -1,11 +1,11 @@
-import numpy as np
-import random
 import os
+import random
+import numpy as np
 import torch
+from torch.optim.optimizer import Optimizer
 
 
 ON_KAGGLE = 'KAGGLE_WORKING_DIR' in os.environ
-
 
 def seed_everything(seed=123):
     random.seed(seed)
