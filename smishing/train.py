@@ -1,4 +1,5 @@
 import time
+import math
 import numpy as np
 import torch
 from torch import nn, cuda
@@ -9,6 +10,9 @@ from sklearn.metrics import roc_auc_score
 
 batch_size = 512
 
+def truncate(number, digits) -> float:
+    stepper = 10.0 ** digits
+    return math.trunc(stepper * number) / stepper
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -30,7 +34,8 @@ def train_model(model, train_loader, valid_loader, criterion, save_path, device,
 
         train_loss = train_one_epoch(model, criterion, train_loader, optimizer, device)
         val_loss, val_score = validation(model, criterion, valid_loader, device)
-    
+        val_score = truncate(val_score, 8)
+        
         if val_score > best_valid_score:
             best_valid_score = val_score
             torch.save(model.state_dict(), save_path)
@@ -38,7 +43,7 @@ def train_model(model, train_loader, valid_loader, criterion, save_path, device,
         elapsed = time.time() - start_time
         
         lr = [_['lr'] for _ in optimizer.param_groups]
-        print("Epoch {} - train_loss: {:.6f}  val_loss: {:.6f}  val_score: {:.8f}  lr: {:.5f}  time: {:.0f}s".format(
+        print("Epoch {} - train_loss: {:.6f}  val_loss: {:.6f}  val_score: {}  lr: {:.5f}  time: {:.0f}s".format(
                 epoch+1, train_loss, val_loss, val_score, lr[0], elapsed))
 
         # scheduler update

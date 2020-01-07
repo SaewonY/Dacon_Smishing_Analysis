@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 from collections import Counter
 from .utils import ON_KAGGLE 
-# if not ON_KAGGLE:
-#     from soynlp.hangle import decompose
+if not ON_KAGGLE:
+    from soynlp.hangle import decompose
 
 
 max_features = 100000
@@ -47,39 +47,39 @@ if __name__ == '__main__':
 
     doublespace_pattern = re.compile('\s+')
 
-    # def jamo_sentence(sent):
-
-        # def transform(char):
-        #     if char == ' ':
-        #         return char
-        #     cjj = decompose(char)
-        #     try:
-        #         len(cjj)
-        #     except:
-        #         return ' '
-        #     if len(cjj) == 1:
-        #         return cjj
-        #     cjj_ = ''.join(c if c != ' ' else '' for c in cjj)
-        #     return cjj_
-
-        # sent_ = ''.join(transform(char) for char in sent)
-        # sent_ = doublespace_pattern.sub(' ', sent_)
-        # return sent_
-
     def jamo_sentence(sent):
-        sent = sent.replace('XXX', 'X')
+
         def transform(char):
             if char == ' ':
                 return char
-            elif char == 'X':
-                return ' X'
-            elif char == '.':
-                return '. '
-            else:
-                return char
+            cjj = decompose(char)
+            try:
+                len(cjj)
+            except:
+                return ' '
+            if len(cjj) == 1:
+                return cjj
+            cjj_ = ''.join(c if c != ' ' else '' for c in cjj)
+            return cjj_
+
         sent_ = ''.join(transform(char) for char in sent)
         sent_ = doublespace_pattern.sub(' ', sent_)
         return sent_
+
+    # def jamo_sentence(sent):
+    #     sent = sent.replace('XXX', 'X')
+    #     def transform(char):
+    #         if char == ' ':
+    #             return char
+    #         elif char == 'X':
+    #             return ' X'
+    #         elif char == '.':
+    #             return '. '
+    #         else:
+    #             return char
+    #     sent_ = ''.join(transform(char) for char in sent)
+    #     sent_ = doublespace_pattern.sub(' ', sent_)
+    #     return sent_
 
     train_df['jamo'] = train_df['text'].apply(lambda x: jamo_sentence(x))
     test_df['jamo'] = test_df['text'].apply(lambda x: jamo_sentence(x))
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
     # preprocess fasttext vacab
     from gensim.models.wrappers import FastText
-    FASTTEXT_PATH = os.path.join(DATASET_PATH, 'model_file.bin')
+    FASTTEXT_PATH = os.path.join(DATASET_PATH, 'bigram_model_file.bin')
     model = FastText.load_fasttext_format(FASTTEXT_PATH)
     fasttext = model.wv
 
@@ -102,5 +102,5 @@ if __name__ == '__main__':
     # fasttext_word_vectors_list = fasttext_vocab.values()
     
     import pickle
-    with open('../input/fasttext_vocab.pkl', 'wb') as f:
+    with open('../input/fasttext_bigram_vocab.pkl', 'wb') as f:
         pickle.dump(fasttext_vocab, f)

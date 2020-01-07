@@ -58,29 +58,34 @@ def main(args):
     if not ON_KAGGLE:
         DATASET_PATH = '../input/'
         FASTTEXT_PATH = '../input/fasttext_vocab.pkl'
+        GLOVE_PATH = '../input/glove.200D.200E.pkl'
     else:
         DATASET_PATH = '../input/dacon-smishing-analysis/'
         FASTTEXT_PATH = '../input/dacon-smishing-analysis/fasttext_vocab.pkl'
+        GLOVE_PATH = '../input/dacon-smishing-analysis/glove.200D.200E.pkl'
+
+    if args.embedding == 'fasttext':
+        EMBEDDING_PATH = FASTTEXT_PATH
+    elif args.embedding == 'glove':
+        EMBEDDING_PATH = GLOVE_PATH
+    elif args.embedding == 'mix':
+        EMBEDDING_PATH = [FASTTEXT_PATH, GLOVE_PATH] 
+    else:
+        raise NotImplementedError
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(exist_ok=True, parents=True)
 
     # mode to run
     if args.mode == 'train':
-        train(args, output_dir, DATASET_PATH, FASTTEXT_PATH)
+        train(args, output_dir, DATASET_PATH, EMBEDDING_PATH)
     elif args.mode == 'inference':
-        inference(args, output_dir, DATASET_PATH, FASTTEXT_PATH)
+        inference(args, output_dir, DATASET_PATH, EMBEDDING_PATH)
     else:
         raise NotImplementedError
 
-    # if args.train:
-    #     train(args, output_dir, DATASET_PATH, FASTTEXT_PATH)
 
-    # if args.inference:
-    #     inference(args, output_dir, DATASET_PATH, FASTTEXT_PATH)
-
-
-def train(args, output_dir, DATASET_PATH, FASTTEXT_PATH):    
+def train(args, output_dir, DATASET_PATH, EMBEDDING_PATH):    
 
     if cuda.is_available():
         device = torch.device("cuda:0")
@@ -99,10 +104,8 @@ def train(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
 
     x_train, y_train, x_test = load_input(DATASET_PATH)
 
-    with open(FASTTEXT_PATH, 'rb') as f:    
-        fasttext_vocab = pickle.load(f)
 
-    vocab = build_vocab(list(x_train.apply(lambda x: x.split())))
+    # vocab = build_vocab(list(x_train.apply(lambda x: x.split())))
 
     # max_features = len(vocab) 
     # print("max_features", max_features)
@@ -110,9 +113,21 @@ def train(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
     tokenizer = text.Tokenizer(num_words = args.max_features, filters='', lower=False)
     tokenizer.fit_on_texts(list(x_train) + list(x_test))
 
-    vector_size = 200
-    embedding_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, fasttext_vocab, vector_size)
-    
+    if args.embedding != 'mix':
+        with open(EMBEDDING_PATH, 'rb') as f:    
+            embedding_vocab = pickle.load(f)
+        embedding_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, embedding_vocab, args.vector_size)  
+    else:
+        with open(EMBEDDING_PATH[0], 'rb') as f:    
+            fasttext_vocab = pickle.load(f)
+        with open(EMBEDDING_PATH[1], 'rb') as f:    
+            glove_vocab = pickle.load(f)
+        fasttext_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, fasttext_vocab, args.vector_size)
+        glove_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, glove_vocab, args.vector_size)
+        embedding_matrix = np.concatenate([fasttext_matrix, glove_matrix], axis=0)
+
+    import pdb; pdb.set_trace()
+
     x_train = tokenizer.texts_to_sequences(x_train)
 
     lengths = torch.from_numpy(np.array([len(x) for x in x_train]))
@@ -166,7 +181,7 @@ def train(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
 
 
 
-def inference(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
+def inference(args, output_dir, DATASET_PATH, EMBEDDING_PATH):
 
     if cuda.is_available():
         device = torch.device("cuda:0")
@@ -179,19 +194,26 @@ def inference(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
     test_df_id = test_df['id']
     
     x_train, y_train, x_test = load_input(DATASET_PATH)
-
-    with open(FASTTEXT_PATH, 'rb') as f:    
-        fasttext_vocab = pickle.load(f)
     
-    vocab = build_vocab(list(x_train.apply(lambda x: x.split())))
+    # vocab = build_vocab(list(x_train.apply(lambda x: x.split())))
     # max_features = len(vocab) 
     
     tokenizer = text.Tokenizer(num_words = args.max_features, filters='', lower=False)
     tokenizer.fit_on_texts(list(x_train) + list(x_test))
 
-    vector_size = 200
-    embedding_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, fasttext_vocab, vector_size)
-    
+    if args.embedding != 'mix':
+        with open(EMBEDDING_PATH, 'rb') as f:    
+            embedding_vocab = pickle.load(f)
+        embedding_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, embedding_vocab, args.vector_size)  
+    else:
+        with open(EMBEDDING_PATH[0], 'rb') as f:    
+            fasttext_vocab = pickle.load(f)
+        with open(EMBEDDING_PATH[1], 'rb') as f:    
+            glove_vocab = pickle.load(f)
+        fasttext_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, fasttext_vocab, args.vector_size)
+        glove_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, glove_vocab, args.vector_size)
+        embedding_matrix = np.concatenate([fasttext_matrix, glove_matrix], axis=0)
+
     x_test = tokenizer.texts_to_sequences(x_test)
     test_lengths = torch.from_numpy(np.array([len(x) for x in x_test]))
     maxlen = test_lengths.max()
@@ -201,7 +223,7 @@ def inference(args, output_dir, DATASET_PATH, FASTTEXT_PATH):
     test_collator = SequenceBucketCollator(lambda length: test_lengths.max(), maxlen=maxlen, sequence_index=0, length_index=1)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=test_collator)
 
-    del x_test, x_test_padded, unknown_words_fasttext, tokenizer, vocab
+    del x_test, x_test_padded, unknown_words_fasttext, tokenizer
     gc.collect()
     
     model = NeuralNet(embedding_matrix) 
@@ -250,9 +272,11 @@ if __name__ == '__main__':
     arg('--n_epochs', type=int, default=6)
     arg('--lr', type=float, default=0.005)
     arg('--batch_size', type=int, default=512)
+    arg('--vector_size', type=int, default=200)
     arg('--max_len', type=int, default=236)
     arg('--max_features', type=int, default=100000)
     arg('--n_folds', type=int, default=5)
+    arg('--embedding', type=str, default='fasttext')
     arg('--criterion', type=str, default='BCE')
     arg('--debug', action='store_true')
     args = parser.parse_args()
