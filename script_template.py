@@ -20,5 +20,8 @@ def run(command):
 
 
 run('python setup.py develop --install-dir /kaggle/working')
-run('python -m smishing.main train --validate --embedding fasttext --max_features 100000 --n_epochs 6')
-run('python -m smishing.main inference --embedding fasttext')
+run('python -m smishing.main train --embedding mix --vector_size 300 --n_epochs 6')
+run('python -m smishing.main inference --embedding mix --vector_size 300 --n_epochs 6')
+# inference도 epoch, vector size 동일하게 할 것.
+
+# glove fasttext mix

@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
     # preprocess fasttext vacab
     from gensim.models.wrappers import FastText
-    FASTTEXT_PATH = os.path.join(DATASET_PATH, 'bigram_model_file.bin')
+    FASTTEXT_PATH = os.path.join(DATASET_PATH, '4gram_model_file.bin')
     model = FastText.load_fasttext_format(FASTTEXT_PATH)
     fasttext = model.wv
 
@@ -101,5 +101,5 @@ if __name__ == '__main__':
     # fasttext_word_vectors_list = fasttext_vocab.values()
     
     import pickle
-    with open('../input/fasttext_bigram_vocab.pkl', 'wb') as f:
+    with open('../input/fasttext_4gram_vocab.pkl', 'wb') as f:
         pickle.dump(fasttext_vocab, f)

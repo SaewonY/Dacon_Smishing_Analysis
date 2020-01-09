@@ -13,7 +13,7 @@ class NeuralNet(nn.Module):
         super(NeuralNet, self).__init__()
 
         lstm_hidden_size = 120
-        gru_hidden_size = 60
+        gru_hidden_size = 60 # 60
         self.gru_hidden_size = gru_hidden_size
 
         self.embedding = nn.Embedding(*embedding_matrix.shape)
@@ -26,7 +26,7 @@ class NeuralNet(nn.Module):
 
         self.linear = nn.Linear(gru_hidden_size * 6, 20)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(0.2)
         self.out = nn.Linear(20, 1)
         
     def apply_spatial_dropout(self, h_embedding):

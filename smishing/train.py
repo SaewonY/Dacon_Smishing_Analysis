@@ -40,14 +40,13 @@ def train_model(args, fold_num, model, train_loader, valid_loader, criterion, ou
         val_loss, val_score = validation(args, model, criterion, valid_loader, device)
         val_score = truncate(val_score, 8)
         
-        if not args.validate:
-            save_path = output_dir / f'fold_{fold_num+1}_epoch_{epoch+1}_model.pt'
-            torch.save(model.state_dict(), save_path)
-        
         if args.validate:
             if val_score > best_valid_score:
                 best_valid_score = val_score
                 # torch.save(model.state_dict(), save_path)
+        else:
+            save_path = output_dir / f'fold_{fold_num+1}_epoch_{epoch+1}_model.pt'
+            torch.save(model.state_dict(), save_path)
     
         elapsed = time.time() - start_time
         

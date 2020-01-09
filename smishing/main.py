@@ -57,12 +57,12 @@ def main(args):
 
     if not ON_KAGGLE:
         DATASET_PATH = '../input/'
-        FASTTEXT_PATH = '../input/fasttext_bigram_vocab.pkl'
-        GLOVE_PATH = '../input/glove.200D.200E.pkl'
+        FASTTEXT_PATH = '../input/fasttext_bigram_300_epoch_30.pkl'
+        GLOVE_PATH = '../input/glove_300_epoch_10.pkl'
     else:
         DATASET_PATH = '../input/dacon-smishing-analysis/'
-        FASTTEXT_PATH = '../input/dacon-smishing-analysis/fasttext_bigram_vocab.pkl'
-        GLOVE_PATH = '../input/dacon-smishing-analysis/glove.200D.200E.pkl'
+        FASTTEXT_PATH = '../input/dacon-smishing-analysis/fasttext_bigram_300_epoch_30.pkl'
+        GLOVE_PATH = '../input/dacon-smishing-analysis/glove_300_epoch_10.pkl'
 
     if args.embedding == 'fasttext':
         EMBEDDING_PATH = FASTTEXT_PATH
@@ -153,7 +153,7 @@ def train(args, output_dir, DATASET_PATH, EMBEDDING_PATH):
 
     splits = list(KFold(n_splits=args.n_folds, shuffle=True, random_state=args.seed).split(x_train_padded))
 
-    for fold_num in range(n_splits):
+    for fold_num in range(args.n_folds):
         
         print(f"fold_{fold_num+1} start training")
 
@@ -327,7 +327,7 @@ if __name__ == '__main__':
     arg('--batch_size', type=int, default=512)
     arg('--vector_size', type=int, default=200)
     arg('--max_len', type=int, default=236)
-    arg('--max_features', type=int, default=150000)
+    arg('--max_features', type=int, default=100000)
     arg('--n_folds', type=int, default=5)
     arg('--embedding', type=str, default='fasttext')
     arg('--criterion', type=str, default='BCE')
