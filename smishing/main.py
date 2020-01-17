@@ -38,15 +38,18 @@ def sigmoid(x):
 
 def load_input(DATASET_PATH):
 
-    train_df = pd.read_csv(os.path.join(DATASET_PATH, 'preprocessed_train.csv'))
-    test_df = pd.read_csv(os.path.join(DATASET_PATH, 'preprocessed_test.csv'))
+    train_df = pd.read_csv(os.path.join(DATASET_PATH, 'preprocessed_train_nouns.csv'))
+    test_df = pd.read_csv(os.path.join(DATASET_PATH, 'preprocessed_test_nouns.csv'))
     if args.debug:
         train_df = train_df[:2000]
 
-    x_train = train_df['jamo']
-    x_test = test_df['jamo']
-    y_train = torch.tensor(train_df['smishing']).float().unsqueeze(1)
+    train_df['nouns'] = train_df['nouns'].fillna('X') 
+    test_df['nouns'] = test_df['nouns'].fillna('X') 
 
+    x_train = train_df['nouns'].astype(str)
+    x_test = test_df['nouns'].astype(str)
+    y_train = torch.tensor(train_df['smishing']).float().unsqueeze(1)
+    
     del train_df, test_df
     gc.collect()
 
@@ -57,19 +60,23 @@ def main(args):
 
     if not ON_KAGGLE:
         DATASET_PATH = '../input/'
-        FASTTEXT_PATH = '../input/fasttext_bigram_300_epoch_30.pkl'
-        GLOVE_PATH = '../input/glove_300_epoch_10.pkl'
+        WORD2VEC_PATH = '../input/word2vec_200_epoch_10_nouns.pkl'
+        FASTTEXT_PATH = '../input/fasttext_5gram_200_epcoh_10_nouns.pkl'
+        GLOVE_PATH = '../input/glove_200_epoch_10_nouns.pkl'
     else:
         DATASET_PATH = '../input/dacon-smishing-analysis/'
-        FASTTEXT_PATH = '../input/dacon-smishing-analysis/fasttext_bigram_300_epoch_30.pkl'
-        GLOVE_PATH = '../input/dacon-smishing-analysis/glove_300_epoch_10.pkl'
+        WORD2VEC_PATH = '../input/dacon-smishing-analysis/word2vec_200_epoch_10_nouns.pkl'
+        FASTTEXT_PATH = '../input/dacon-smishing-analysis/fasttext_5gram_200_epcoh_10_nouns.pkl'
+        GLOVE_PATH = '../input/dacon-smishing-analysis/glove_200_epoch_10_nouns.pkl'
 
-    if args.embedding == 'fasttext':
+    if args.embedding == 'word2vec':
+        EMBEDDING_PATH = WORD2VEC_PATH
+    elif args.embedding == 'fasttext':
         EMBEDDING_PATH = FASTTEXT_PATH
     elif args.embedding == 'glove':
         EMBEDDING_PATH = GLOVE_PATH
     elif args.embedding == 'mix':
-        EMBEDDING_PATH = [FASTTEXT_PATH, GLOVE_PATH] 
+        EMBEDDING_PATH = [WORD2VEC_PATH, FASTTEXT_PATH, GLOVE_PATH] 
     else:
         raise NotImplementedError
 
@@ -107,25 +114,30 @@ def train(args, output_dir, DATASET_PATH, EMBEDDING_PATH):
 
     x_train, y_train, x_test = load_input(DATASET_PATH)
 
-    # vocab = build_vocab(list(x_train.apply(lambda x: x.split())))
-    max_features = args.max_features
+    vocab = build_vocab(list(x_train.apply(lambda x: x.split())))
+    max_features = len(vocab)
     print("max_features", max_features)
 
     tokenizer = text.Tokenizer(num_words = max_features, filters='')
     tokenizer.fit_on_texts(list(x_train) + list(x_test))
-
+    
     if args.embedding != 'mix':
         with open(EMBEDDING_PATH, 'rb') as f:    
             embedding_vocab = pickle.load(f)
-        embedding_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, embedding_vocab, max_features, args.vector_size)  
+        embedding_matrix, unknown_words = build_matrix(tokenizer.word_index, embedding_vocab, max_features, args.vector_size)  
     else:
         with open(EMBEDDING_PATH[0], 'rb') as f:    
-            fasttext_vocab = pickle.load(f)
-        with open(EMBEDDING_PATH[1], 'rb') as f:    
+            word2vec_vocab = pickle.load(f)
+        # with open(EMBEDDING_PATH[1], 'rb') as f:    
+        #     fasttext_vocab = pickle.load(f)
+        with open(EMBEDDING_PATH[2], 'rb') as f:    
             glove_vocab = pickle.load(f)
-        fasttext_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, fasttext_vocab, max_features, args.vector_size)
-        glove_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, glove_vocab, max_features, args.vector_size)
-        embedding_matrix = np.concatenate([fasttext_matrix, glove_matrix], axis=0)
+        word2vec_matrix, unknown_words_word2vec = build_matrix(tokenizer.word_index, word2vec_vocab, max_features, args.vector_size)
+        # fasttext_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, fasttext_vocab, max_features, args.vector_size)
+        glove_matrix, unknown_words_glove = build_matrix(tokenizer.word_index, glove_vocab, max_features, args.vector_size)
+        embedding_matrix = np.concatenate([word2vec_matrix, glove_matrix], axis=0)
+        # del word2vec_matrix, fasttext_matrix, glove_matrix, unknown_words_word2vec, unknown_words_fasttext, unknown_words_glove
+        # gc.collect()
 
     x_train = tokenizer.texts_to_sequences(x_train)
 
@@ -176,6 +188,9 @@ def train(args, output_dir, DATASET_PATH, EMBEDDING_PATH):
                     n_epochs=args.n_epochs,
                     lr=args.lr)
         print()
+
+    del x_train, x_train_padded, tokenizer, train_loader, valid_loader, model, embedding_matrix
+    gc.collect()
 
     return None
 
@@ -232,8 +247,8 @@ def inference(args, output_dir, DATASET_PATH, EMBEDDING_PATH):
     
     x_train, y_train, x_test = load_input(DATASET_PATH)
     
-    # vocab = build_vocab(list(x_train.apply(lambda x: x.split())))
-    max_features = args.max_features
+    vocab = build_vocab(list(x_train.apply(lambda x: x.split())))
+    max_features = len(vocab)
     print("max_features", max_features)
     
     tokenizer = text.Tokenizer(num_words = max_features, filters='', lower=False)
@@ -242,15 +257,20 @@ def inference(args, output_dir, DATASET_PATH, EMBEDDING_PATH):
     if args.embedding != 'mix':
         with open(EMBEDDING_PATH, 'rb') as f:    
             embedding_vocab = pickle.load(f)
-        embedding_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, embedding_vocab, max_features, args.vector_size)  
+        embedding_matrix, unknown_words = build_matrix(tokenizer.word_index, embedding_vocab, max_features, args.vector_size)  
     else:
         with open(EMBEDDING_PATH[0], 'rb') as f:    
-            fasttext_vocab = pickle.load(f)
-        with open(EMBEDDING_PATH[1], 'rb') as f:    
+            word2vec_vocab = pickle.load(f)
+        # with open(EMBEDDING_PATH[1], 'rb') as f:    
+        #     fasttext_vocab = pickle.load(f)
+        with open(EMBEDDING_PATH[2], 'rb') as f:    
             glove_vocab = pickle.load(f)
-        fasttext_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, fasttext_vocab, max_features, args.vector_size)
-        glove_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, glove_vocab, max_features, args.vector_size)
-        embedding_matrix = np.concatenate([fasttext_matrix, glove_matrix], axis=0)
+        word2vec_matrix, unknown_words_word2vec = build_matrix(tokenizer.word_index, word2vec_vocab, max_features, args.vector_size)
+        # fasttext_matrix, unknown_words_fasttext = build_matrix(tokenizer.word_index, fasttext_vocab, max_features, args.vector_size)
+        glove_matrix, unknown_words_glove = build_matrix(tokenizer.word_index, glove_vocab, max_features, args.vector_size)
+        embedding_matrix = np.concatenate([word2vec_matrix, glove_matrix], axis=0)
+        # del word2vec_matrix, fasttext_matrix, glove_matrix, unknown_words_word2vec, unknown_words_fasttext, unknown_words_glove
+        # gc.collect()
 
     x_test = tokenizer.texts_to_sequences(x_test)
     test_lengths = torch.from_numpy(np.array([len(x) for x in x_test]))
@@ -260,9 +280,6 @@ def inference(args, output_dir, DATASET_PATH, EMBEDDING_PATH):
     test_dataset = TensorDataset(x_test_padded, test_lengths)
     test_collator = SequenceBucketCollator(lambda length: test_lengths.max(), maxlen=maxlen, sequence_index=0, length_index=1)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=test_collator)
-
-    del x_test, x_test_padded, unknown_words_fasttext, tokenizer
-    gc.collect()
     
     # model_lists = [file for file in os.listdir(output_dir) if file.endswith('.pt')]
     fold1_model_lists = sorted([file for file in os.listdir(output_dir) if file.startswith('fold_1')])
@@ -327,9 +344,9 @@ if __name__ == '__main__':
     arg('--batch_size', type=int, default=512)
     arg('--vector_size', type=int, default=200)
     arg('--max_len', type=int, default=236)
-    arg('--max_features', type=int, default=100000)
+    # arg('--max_features', type=int, default=100000)
     arg('--n_folds', type=int, default=5)
-    arg('--embedding', type=str, default='fasttext')
+    arg('--embedding', type=str, default='word2vec')
     arg('--criterion', type=str, default='BCE')
     arg('--debug', action='store_true')
     args = parser.parse_args()
